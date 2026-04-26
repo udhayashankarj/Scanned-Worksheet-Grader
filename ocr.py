@@ -10,15 +10,15 @@ Return ONLY a valid JSON object like this (no markdown, no backticks):
   "subject": "subject name",
   "total_marks": total marks specified,
   "questions": [
-    {{"question_number": 1, "question": "extracted question here", "expected_answer": "extracted answer here", "max_marks": extracted max mark here}},
-    {{"question_number": 2, "question": "extracted question here", "expected_answer": "extracted answer here", "max_marks": extracted max mark here}}
+    {{"question_number": "extracted question number", "question": "extracted question here", "expected_answer": "extracted answer here", "max_marks": extracted max mark here,"any_one_part":True or False}},
+    {{"question_number": "extracted question number", "question": "extracted question here", "expected_answer": "extracted answer here", "max_marks": extracted max mark here,"any_one_part":True or False}}
   ]
 }}
 """
 
 def build_ocr_prompt_for_answer_sheet(answer_key) -> str:
     questions_list = "\n".join(
-        [f"Q{q.question_number}: {q.question}" for q in answer_key.questions]
+        [f"Q{q['question_number']}: {q['question']}" for q in answer_key['questions']]
     )
     return f"""You are an expert OCR system for handwritten answer sheets.
 

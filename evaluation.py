@@ -1,19 +1,20 @@
 def build_evaluation_prompt(answer_key, ocr_results) -> str:
     qa_pairs = []
-    for q in answer_key.questions:
+    for q in answer_key['questions']:
         student_ans = next(
-            (a["student_answer"] for a in ocr_results["answers"] if a["question_number"] == q.question_number),
+            (a["student_answer"] for a in ocr_results["answers"] if q['question_number'] in a['question_number']),
             "No answer provided"
         )
         qa_pairs.append(
-            f"Q{q.question_number} [{q.max_marks} marks]: {q.question}\n"
-            f"  Expected: {q.expected_answer}\n"
-            f"  Student wrote: {student_ans}"
+            f"Q{q['question_number']} [{q['max_marks']} marks]: {q['question']}\n"
+            f"  Expected: {q['expected_answer']}\n"
+            f"  Student wrote: {student_ans}\n"
+            f"  Is it either or question :{q['any_one_part']}"
         )
 
     pairs_text = "\n\n".join(qa_pairs)
 
-    return f"""You are an expert examiner for {answer_key.subject}.
+    return f"""You are an expert examiner for {answer_key['subject']}.
 
 Evaluate each student answer against the expected answer and assign marks.
 

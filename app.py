@@ -66,7 +66,7 @@ if st.button("Calculate Score"):
             contents=contents
         )
         
-        answer_key_json = response.text.strip()
+        answer_key_json = json.loads(response.text.strip())
 
         contents = [
             types.Part.from_bytes(data=answer_sheet_bytes, mime_type='application/pdf'),
@@ -78,7 +78,7 @@ if st.button("Calculate Score"):
             contents=contents
         )
         
-        answer_sheet_json = response.text.strip()
+        answer_sheet_json = json.loads(response.text.strip())
 
 
         response = client.models.generate_content(
@@ -87,17 +87,17 @@ if st.button("Calculate Score"):
             contents=evaluation.build_evaluation_prompt(answer_key_json,answer_sheet_json)
         )
         
-        evaluation_json = response.text.strip()
+        evaluation_json = json.loads(response.text.strip())
 
-        score = sum([e.marks_awarded  for e in evaluation_json.evaluations])  # Placeholder value
-        description = evaluation_json.overall_feedback
+        score = sum([e['marks_awarded']  for e in evaluation_json['evaluations']])  # Placeholder value
+        description = evaluation_json['overall_feedback']
         
         # --- Output Section ---
         st.divider()
         st.header("Results")
         
         # Metric display for score
-        st.metric(label="Final Score", value=f"{score}%")
+        st.metric(label="Final Score", value=f"{score}/{answer_key_json['total_marks']}")
         
         # Description display
         st.subheader("Performance Summary")
