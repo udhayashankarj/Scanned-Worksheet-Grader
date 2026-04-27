@@ -44,64 +44,73 @@ with col2:
 
 # Button to trigger grading
 if st.button("Calculate Score"):
+    if not answer_sheet and not answer_key:
+        st.error("Missing Files: Please upload both the Answer Sheet and the Answer Key.")
+    
+    elif not answer_sheet:
+        st.warning("The Answer Sheet is missing. Please upload the student's work.")
+        
+    elif not answer_key:
+        st.warning("The Answer Key is missing. Please upload the reference key.")
     if answer_sheet and answer_key: 
-        # --- PLACEHOLDER FOR GRADING LOGIC ---
-        # You would implement your text extraction and comparison logic here.
-        answer_sheet_bytes = answer_sheet.getvalue()
-        answer_key_bytes = answer_key.getvalue()
+        try:
+            # --- PLACEHOLDER FOR GRADING LOGIC ---
+            # You would implement your text extraction and comparison logic here.
+            answer_sheet_bytes = answer_sheet.getvalue()
+            answer_key_bytes = answer_key.getvalue()
 
-        # contents = [
-        #     "Please analyze and grade these documents.",
-        #     types.Part.from_bytes(data=answer_sheet_bytes, mime_type='application/pdf'),
-        #     types.Part.from_bytes(data=answer_key_bytes, mime_type='application/pdf')
-        # ]
-        
-        contents = [
-            types.Part.from_bytes(data=answer_key_bytes, mime_type='application/pdf')
-        ]
+            # contents = [
+            #     "Please analyze and grade these documents.",
+            #     types.Part.from_bytes(data=answer_sheet_bytes, mime_type='application/pdf'),
+            #     types.Part.from_bytes(data=answer_key_bytes, mime_type='application/pdf')
+            # ]
+            
+            contents = [
+                types.Part.from_bytes(data=answer_key_bytes, mime_type='application/pdf')
+            ]
+            st.info("Converting answer key to json")
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                config=types.GenerateContentConfig(system_instruction=ocr.build_ocr_prompt_for_answer_key()),
+                contents=contents
+            )
+            
+            answer_key_json = json.loads(response.text.strip())
+            st.info("Converted answer key to json")
+            contents = [
+                types.Part.from_bytes(data=answer_sheet_bytes, mime_type='application/pdf'),
+            ]
+            st.info("Converting answer sheet to json")
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                config=types.GenerateContentConfig(system_instruction=ocr.build_ocr_prompt_for_answer_sheet(answer_key_json)),
+                contents=contents
+            )
+            
+            answer_sheet_json = json.loads(response.text.strip())
+            st.info("Converted answer sheet to json")
+            st.info("Evaluating answer sheet json with answer key json")
 
-        response = client.models.generate_content(
-            model="gemini-3-flash-preview",
-            config=types.GenerateContentConfig(system_instruction=ocr.build_ocr_prompt_for_answer_key()),
-            contents=contents
-        )
-        
-        answer_key_json = json.loads(response.text.strip())
-
-        contents = [
-            types.Part.from_bytes(data=answer_sheet_bytes, mime_type='application/pdf'),
-        ]
-
-        response = client.models.generate_content(
-            model="gemini-3-flash-preview",
-            config=types.GenerateContentConfig(system_instruction=ocr.build_ocr_prompt_for_answer_sheet(answer_key_json)),
-            contents=contents
-        )
-        
-        answer_sheet_json = json.loads(response.text.strip())
-
-
-        response = client.models.generate_content(
-            model="gemini-3-flash-preview",
-            config=types.GenerateContentConfig(system_instruction="You are an expert examiner"),
-            contents=evaluation.build_evaluation_prompt(answer_key_json,answer_sheet_json)
-        )
-        
-        evaluation_json = json.loads(response.text.strip())
-
-        score = sum([e['marks_awarded']  for e in evaluation_json['evaluations']])  # Placeholder value
-        description = evaluation_json['overall_feedback']
-        
-        # --- Output Section ---
-        st.divider()
-        st.header("Results")
-        
-        # Metric display for score
-        st.metric(label="Final Score", value=f"{score}/{answer_key_json['total_marks']}")
-        
-        # Description display
-        st.subheader("Performance Summary")
-        st.write(description)
-        
-    else:
-        st.warning("Please upload both files to proceed.")
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                config=types.GenerateContentConfig(system_instruction="You are an expert examiner"),
+                contents=evaluation.build_evaluation_prompt(answer_key_json,answer_sheet_json)
+            )
+            
+            evaluation_json = json.loads(response.text.strip())
+            st.info("Evaluated answer sheet json with answer key json")
+            score = sum([e['marks_awarded']  for e in evaluation_json['evaluations']])  # Placeholder value
+            description = evaluation_json['overall_feedback']
+            
+            # --- Output Section ---
+            st.divider()
+            st.header("Results")
+            
+            # Metric display for score
+            st.metric(label="Final Score", value=f"{score}/{answer_key_json['total_marks']}")
+            
+            # Description display
+            st.subheader("Performance Summary")
+            st.write(description)
+        except Exception as e:
+            st.error(f"An error occurred during processing: {e}")
